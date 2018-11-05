@@ -1,13 +1,16 @@
 package com.zdzc.collector.server;
 
-import com.zdzc.collector.rabbitmq.MqSender;
+import com.zdzc.collector.message.Message;
+import com.zdzc.collector.util.CommonUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.internal.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,17 +31,19 @@ public class EchoServerHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         try {
              ByteBuf in = (ByteBuf) msg;
-            // String data = in.toString(io.netty.util.CharsetUtil.UTF_8);
-//            Message message = (Message) (msg);
+//             String data = in.toString(io.netty.util.CharsetUtil.UTF_8);
+            String str = CommonUtil.bytebufToHexstr(in);
 
-            // Receive message from client
-            // Send message to rabbit MQ who wants to subscribe
-//            String dataString = new String(message.getData(), CharsetUtil.UTF_8);
+//            Message Message = (Message) (msg);
+
+            // Receive Message from client
+            // Send Message to rabbit MQ who wants to subscribe
+//            String dataString = new String(Message.getData(), CharsetUtil.UTF_8);
 //            mqSender.send(dataString);
 
             // Echo server: send back the msg to client (just for test)
-//            log.debug(String.format("Receive message: %s", dataString));
-//            ctx.writeAndFlush(Unpooled.copiedBuffer(message.getData()));
+//            log.debug(String.format("Receive Message: %s", dataString));
+//            ctx.writeAndFlush(Unpooled.copiedBuffer(Message.getData()));
         } finally {
             ReferenceCountUtil.release(msg);
         }
@@ -58,7 +63,7 @@ public class EchoServerHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
             throws Exception {
-        ctx.close();
+//        ctx.close();
         log.warn(cause.getMessage());
     }
 

@@ -1,5 +1,6 @@
 package com.zdzc.collector;
 
+import com.zdzc.collector.server.NettyMqServer;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -8,5 +9,7 @@ public class CollectorApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(CollectorApplication.class, args);
+        NettyMqServer server = new NettyMqServer();
+        server.doStart();
     }
 }
