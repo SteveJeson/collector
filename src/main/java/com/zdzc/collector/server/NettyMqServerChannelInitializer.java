@@ -2,7 +2,6 @@ package com.zdzc.collector.server;
 
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.timeout.IdleStateHandler;
 
 public class NettyMqServerChannelInitializer extends
@@ -19,9 +18,7 @@ public class NettyMqServerChannelInitializer extends
         // Reader ilde time 3 minutes
         ch.pipeline().addLast(new IdleStateHandler(3 * 60, 0, 0));
         ch.pipeline().addLast(new HeartBeatHandler());
-//        ch.pipeline().addLast(
-//                new LengthFieldBasedFrameDecoder(2119060288, 0, 4, -4, 0));
-//        ch.pipeline().addLast(new ToMessageDecoder());
+        ch.pipeline().addLast(new ToMessageDecoder());
         ch.pipeline().addLast(new EchoServerHandler(mqSender));
     }
 }

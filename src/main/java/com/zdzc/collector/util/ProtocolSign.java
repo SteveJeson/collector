@@ -1,11 +1,11 @@
 package com.zdzc.collector.util;
 
-public enum ProtocolType {
+public enum ProtocolSign {
     JT808("7E", "beginMark"), WRT("54", "beginMark");
     private String value;
     private String desc;
 
-    private ProtocolType(String value, String desc) {
+    private ProtocolSign(String value, String desc) {
         this.value = value;
         this.desc = desc;
     }

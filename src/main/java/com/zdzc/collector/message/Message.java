@@ -2,9 +2,29 @@ package com.zdzc.collector.message;
 
 public class Message {
 
+
+    /**
+     * 消息头
+     */
     private Header header;
 
-    private byte[] data;
+    /**
+     * 消息体
+     */
+    private byte[] body;
+
+    /**
+     * 完整消息
+     */
+    private String all;
+
+    /**
+     * 应答消息
+     */
+    private byte[] replyBody;
+
+    public Message() {
+    }
 
     public Header getHeader() {
         return header;
@@ -14,28 +34,28 @@ public class Message {
         this.header = header;
     }
 
-    public byte[] getData() {
-        return data;
+    public byte[] getBody() {
+        return body;
     }
 
-    public void setData(byte[] data) {
-        this.data = data;
+    public void setBody(byte[] body) {
+        this.body = body;
     }
 
-    public byte[] getBytes() {
-        if (header != null) {
-            int len = header.getMsgLength();
-            byte[] buffer = new byte[len];
-            byte[] headerBytes = header.getBytes();
-            System.arraycopy(headerBytes, 0, buffer, 0, headerBytes.length);
-            if (data != null) {
-                System.arraycopy(data, 0, buffer, headerBytes.length,
-                        data.length);
-            }
 
-            return buffer;
-        }
+    public byte[] getReplyBody() {
+        return replyBody;
+    }
 
-        return null;
+    public void setReplyBody(byte[] replyBody) {
+        this.replyBody = replyBody;
+    }
+
+    public String getAll() {
+        return all;
+    }
+
+    public void setAll(String all) {
+        this.all = all;
     }
 }
