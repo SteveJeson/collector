@@ -103,6 +103,10 @@ public class MqInitializer {
 
     public CopyOnWriteArrayList<Channel> replyChannels = new CopyOnWriteArrayList<>();
 
+    public CopyOnWriteArrayList<Channel> getGpsChannels(){
+        return this.gpsChannels;
+    }
+
     /**
      * 配置MQ
      * @throws IOException
@@ -112,6 +116,7 @@ public class MqInitializer {
     public void configMq() throws IOException, TimeoutException {
         setFactory();
         //位置
+        logger.info("Mq Server ==> " + hostname);
         for(int i = 0;i < gpsConnCount;i++){
             logger.info("create GPS connection " + (i + 1));
             createQueues(this.factory.newConnection(), DataType.GPS.getValue());

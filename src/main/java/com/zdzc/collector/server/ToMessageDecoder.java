@@ -3,14 +3,13 @@ package com.zdzc.collector.server;
 import ch.qos.logback.core.encoder.ByteArrayUtil;
 import com.zdzc.collector.message.Header;
 import com.zdzc.collector.message.Message;
+import com.zdzc.collector.util.Command;
 import com.zdzc.collector.util.CommonUtil;
+import com.zdzc.collector.util.DataType;
 import com.zdzc.collector.util.ProtocolSign;
-import com.zdzc.collector.util.ReplySign;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
-import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +17,6 @@ import org.slf4j.LoggerFactory;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -43,7 +41,6 @@ public class ToMessageDecoder extends MessageToMessageDecoder {
             System.out.println("未知协议内容！");
         }else{
             if(markList.get(0).equals(beginMark.toUpperCase())){
-                System.out.println("808协议");
                 if (!in.hasArray()) {//false表示为这是直接缓冲
                     int length = in.readableBytes();//得到可读字节数
                     byte[] array = new byte[length];    //分配一个具有length大小的数组
@@ -65,7 +62,6 @@ public class ToMessageDecoder extends MessageToMessageDecoder {
      */
     private Message toJt808Decoder(byte[] data){
         String hexstr = StringUtil.toHexStringPadded(data);
-        logger.info("source data: " + hexstr);
         byte[] bs = doReceiveEscape(data);
         Boolean isValid = validateChecksum(bs);
         if(!isValid){
@@ -148,6 +144,28 @@ public class ToMessageDecoder extends MessageToMessageDecoder {
     private Message decodeMessage(byte[] data){
         //设置消息头
         Header header = new Header();
+        decodeHeader(data, header);
+        Message message = new Message();
+        message.setHeader(header);//设置消息头
+        int msgBodyByteStartIndex = 12 + 1;
+        // 3. 消息体
+        // 有子包信息,消息体起始字节后移四个字节:消息包总数(word(16))+包序号(word(16))
+        if (header.hasSubPackage())
+        {
+            msgBodyByteStartIndex = 16 + 1;
+        }
+        //设置消息体
+        byte[] buffer = new byte[header.getMsgBodyLength()];
+        System.arraycopy(data, msgBodyByteStartIndex, buffer, 0,header.getMsgBodyLength());
+        message.setBody(buffer);//设置消息体
+        message.setAll(StringUtil.toHexStringPadded(data));
+
+        //设置应答消息
+        setReplyBodyAndType(message);
+        return message;
+    }
+
+    private void decodeHeader(byte[] data, Header header){
         int msgId = CommonUtil.cutBytesToInt(data, 1, 2);
         int msgBodyProps = CommonUtil.cutBytesToInt(data, 2 + 1, 2);
         boolean hasSubPackage = (((msgBodyProps & 0x2000) >> 13) == 1);
@@ -162,95 +180,77 @@ public class ToMessageDecoder extends MessageToMessageDecoder {
         header.setMsgLength(data.length);
         header.setProtocolType(StringUtil.toHexStringPadded(data, 0, 1));
         header.setFlowId(flowId);
-        Message message = new Message();
-        message.setHeader(header);//设置消息头
-        int msgBodyByteStartIndex = 12 + 1;
-        // 3. 消息体
-        // 有子包信息,消息体起始字节后移四个字节:消息包总数(word(16))+包序号(word(16))
-        if (hasSubPackage)
-        {
-            msgBodyByteStartIndex = 16 + 1;
-        }
-        //设置消息体
-        byte[] buffer = new byte[msgBodyLength];
-        System.arraycopy(data, msgBodyByteStartIndex, buffer, 0,msgBodyLength);
-        message.setBody(buffer);//设置消息体
-        message.setAll(StringUtil.toHexStringPadded(data));
-
-        //设置应答消息
-        setReplyBody(message);
-        return message;
     }
 
     /**
      * 设置应答消息
      * @param message
      */
-    private void setReplyBody(Message message){
+    private void setReplyBodyAndType(Message message){
         int msgId = message.getHeader().getMsgId();
         String terminalPhone = message.getHeader().getTerminalPhone();
         int flowId = message.getHeader().getFlowId();
         byte[] body = message.getBody();
-        //1. 终端注册 ==> 终端注册应答
-        if (msgId == ReplySign.msg_id_terminal_register)
+        String all = message.getAll();
+        if (msgId == Command.MSG_ID_TERMINAL_REGISTER)
         {
-            //客户端消息应答
+            logger.info("【808】终端注册 ==> " + all);
+            //1. 终端注册 ==> 终端注册应答
             byte[] sendMsg = newRegistryReplyMsg(0014, terminalPhone, flowId);
-            //设置回复信息
             message.setReplyBody(sendMsg);
-        }
-        //2. 终端鉴权 ==> 平台通用应答
-        else if (msgId == ReplySign.msg_id_terminal_authentication)
+            message.getHeader().setMsgType(DataType.Registry.getValue());
+        }else if (msgId == Command.MSG_ID_TERMINAL_AUTHENTICATION)
         {
-
-            //客户端消息应答
+            logger.info("【808】终端鉴权 ==> " + all);
+            //2. 终端鉴权 ==> 平台通用应答
             byte[] sendMsg = newCommonReplyMsg(0005, terminalPhone, flowId, msgId);
-
-            //设置回复信息
             message.setReplyBody(sendMsg);
-        }
-        //3. 终端心跳-消息体为空 ==> 平台通用应答
-        else if (msgId == ReplySign.msg_id_terminal_heart_beat)
+            //查询终端属性
+            byte[] sendBody = newQueryPropReplyMsg(0005, terminalPhone, flowId);
+            message.setExtReplyBody(sendBody);
+            message.getHeader().setMsgType(DataType.Authentication.getValue());
+        }else if (msgId == Command.MSG_ID_TERMINAL_HEART_BEAT)
         {
+            //3. 终端心跳-消息体为空 ==> 平台通用应答
+            logger.info("【808】终端心跳 ==> " + all);
             SimpleDateFormat sdf = new SimpleDateFormat("yyMMddHHmmss");
             String time = sdf.format(new Date());
-            //todo 测试一下方法是否正确
             byte[] msgBody = ByteArrayUtil.hexStringToByteArray(time);//自定义心跳body为当前时间
             //客户端消息应答
             byte[] sendMsg = newCommonReplyMsg(0005, terminalPhone, flowId, msgId);
             //设置回复信息
             message.setBody(msgBody);
             message.setReplyBody(sendMsg);
-        }
-        //4. 位置信息汇报 ==> 平台通用应答
-        else if (msgId == ReplySign.msg_id_terminal_location_info_upload)
+            message.getHeader().setMsgType(DataType.HEARTBEAT.getValue());
+        }else if (msgId == Command.MSG_ID_TERMINAL_LOCATION_INFO_UPLOAD)
         {
-            //客户端消息应答
+            logger.info("【808】终端定位（单个） ==> " + all);
+            //4. 位置信息汇报 ==> 平台通用应答
             byte[] sendMsg = newCommonReplyMsg(0005, terminalPhone, flowId, msgId);
-            //设置回复信息
             message.setReplyBody(sendMsg);
-        }
-        //5.定位数据批量上传0x0704协议解析
-        else if (msgId == ReplySign.msg_id_terminal_location_info_batch_upload)
+            int alarmSign = CommonUtil.cutBytesToInt(body, 0, 4);
+            message.getHeader().setMsgType(alarmSign <= 0?DataType.GPS.getValue():DataType.ALARM.getValue());
+        }else if (msgId == Command.MSG_ID_TERMINAL_LOCATION_INFO_BATCH_UPLOAD)
         {
-            //客户端消息应答
+            logger.info("【808】终端定位（批量） ==> " + all);
+            //5.定位数据批量上传0x0704协议解析
             byte[] sendMsg = newCommonReplyMsg(0005, terminalPhone, flowId, msgId);
-            //设置回复信息
             message.setReplyBody(sendMsg);
-        }
-        //6.终端属性应答消息
-        else if (msgId == ReplySign.msg_id_terminal_prop_query_resp)
+            byte[] mb = CommonUtil.subByteArr(body, 5, body.length - 5);
+            int alarmSign = CommonUtil.cutBytesToInt(mb, 0, 4);
+            message.getHeader().setMsgType(alarmSign <= 0?DataType.GPS.getValue():DataType.ALARM.getValue());
+        }else if (msgId == Command.MSG_ID_TERMINAL_PROP_QUERY_RESP)
         {
+            logger.info("【808】终端属性查询应答 ==> " + all);
+            //6.终端属性应答消息
             byte[] msgType = new byte[1];
             msgType[0] = 02;
             byte[] newBodyByte = CommonUtil.bytesMerge(msgType, body);
-
             message.setBody(newBodyByte);
-        }
-        // 其他情况
-        else
+            message.getHeader().setMsgType(DataType.Property.getValue());
+        }else
         {
-            logger.error("未知消息类型，终端手机号："+terminalPhone);
+            logger.error("【808】未知消息类型，终端手机号 ==> "+terminalPhone);
         }
     }
 
@@ -272,29 +272,37 @@ public class ToMessageDecoder extends MessageToMessageDecoder {
         //04              结果(00成功, 01车辆已被注册, 02数据库中无该车辆, 03终端已被注册, 04数据库中无该终端)  无车辆与无终端有什么区别 ?
         //313C             鉴权码
         //7E
-        ByteBuffer buffer = ByteBuffer.allocate(100);
+        int len = 0;
         // 1. 0x7e
-        byte[] bt1 = CommonUtil.integerTo1Bytes(ReplySign.pkg_delimiter);
+        byte[] bt1 = CommonUtil.integerTo1Bytes(Command.PKG_DELIMITER);
+        len += bt1.length;
         // 2. 消息ID word(16)
-        byte[] bt2 = CommonUtil.integerTo2Bytes(ReplySign.cmd_terminal_register_resp);
+        byte[] bt2 = CommonUtil.integerTo2Bytes(Command.CMD_TERMINAL_REGISTER_RESP);
+        len += bt2.length;
         // 3.消息体属性
         byte[] bt3 = CommonUtil.integerTo2Bytes(msgBodyProps);
+        len += bt3.length;
         // 4. 终端手机号 bcd[6]
         byte[] bt4 = CommonUtil.string2Bcd(phone);
+        len += bt4.length;
         // 5. 消息流水号 word(16),按发送顺序从 0 开始循环累加
         byte[] bt5 = CommonUtil.integerTo2Bytes(flowId);
+        len += bt5.length;
         // 6. 应答流水号
         byte[] bt6 = CommonUtil.integerTo2Bytes(flowId);
+        len += bt6.length;
         // 7. 成功
         byte[] bt7 = CommonUtil.integerTo1Bytes(0);
+        len += bt7.length;
         // 8. 鉴权码
         byte[] bt8 = new byte[0];
         try {
-            bt8 = ReplySign.replyToken.getBytes("GBK");
+            bt8 = Command.REPLYTOKEN.getBytes(Command.STRING_ENCODING);
         } catch (UnsupportedEncodingException e) {
             logger.error("replytoken parse error: "+e.getMessage());
         }
-
+        len += bt8.length;
+        ByteBuffer buffer = ByteBuffer.allocate(len);
         buffer.put(bt1);
         buffer.put(bt2);
         buffer.put(bt3);
@@ -306,12 +314,16 @@ public class ToMessageDecoder extends MessageToMessageDecoder {
         // 校验码
         int checkSum = calculateChecksum(buffer.array(), 1, buffer.array().length);
         byte[] bt9 = CommonUtil.integerTo1Bytes(checkSum);
-        buffer.put(bt9);
+        len += bt9.length;
+        len += bt1.length;
+        ByteBuffer buf = ByteBuffer.allocate(len);
+        buf.put(buffer.array());
+        buf.put(bt9);
         //结束符
-        buffer.put(bt1);
+        buf.put(bt1);
 
         // 转义
-        return doSendEscape(buffer.array(), 1, buffer.array().length - 1);
+        return doSendEscape(buf.array(), 1, buf.array().length - 1);
     }
 
     /**
@@ -366,24 +378,33 @@ public class ToMessageDecoder extends MessageToMessageDecoder {
         //04              结果(00成功, 01车辆已被注册, 02数据库中无该车辆, 03终端已被注册, 04数据库中无该终端)  无车辆与无终端有什么区别 ?
         //313C             鉴权码
         //7E
-        ByteBuffer buffer = ByteBuffer.allocate(100);
+        int len = 0;
         // 1. 0x7e
-        byte[] bt1 = CommonUtil.integerTo1Bytes(ReplySign.pkg_delimiter);
+        byte[] bt1 = CommonUtil.integerTo1Bytes(Command.PKG_DELIMITER);
+        len += bt1.length;
         // 2. 消息ID word(16)
-        byte[] bt2 = CommonUtil.integerTo2Bytes(ReplySign.cmd_common_resp);
+        byte[] bt2 = CommonUtil.integerTo2Bytes(Command.CMD_COMMON_RESP);
+        len += bt2.length;
         // 3.消息体属性
         byte[] bt3 = CommonUtil.integerTo2Bytes(msgBodyProps);
+        len += bt3.length;
         // 4. 终端手机号 bcd[6]
         byte[] bt4 = CommonUtil.string2Bcd(phone);
+        len += bt4.length;
         // 5. 消息流水号 word(16),按发送顺序从 0 开始循环累加
         byte[] bt5 = CommonUtil.integerTo2Bytes(flowId);
+        len += bt5.length;
         // 6. 应答流水号
         byte[] bt6 = CommonUtil.integerTo2Bytes(flowId);
+        len += bt6.length;
         // 7. 对应终端消息ID
-        byte[] bt7 = CommonUtil.integerTo1Bytes(msgId);
+        byte[] bt7 = CommonUtil.integerTo2Bytes(msgId);
+        len += bt7.length;
         // 8. 成功
         byte[] bt8 = CommonUtil.integerTo1Bytes(0);
+        len += bt8.length;
 
+        ByteBuffer buffer = ByteBuffer.allocate(len);
         buffer.put(bt1);
         buffer.put(bt2);
         buffer.put(bt3);
@@ -395,12 +416,61 @@ public class ToMessageDecoder extends MessageToMessageDecoder {
         // 校验码
         int checkSum = calculateChecksum(buffer.array(), 1, buffer.array().length);
         byte[] bt9 = CommonUtil.integerTo1Bytes(checkSum);
-        buffer.put(bt9);
+        len += bt9.length;
+        len += bt1.length;
+        ByteBuffer buf = ByteBuffer.allocate(len);
+        buf.put(buffer.array());
+        buf.put(bt9);
         //结束符
+        buf.put(bt1);
+        // 转义
+        return doSendEscape(buf.array(), 1, buf.array().length - 1);
+    }
+
+    /**
+     * 终端鉴权 ==> 查询终端属性
+     * @param msgBodyProps
+     * @param phone
+     * @param flowId
+     * @return
+     */
+    public byte[] newQueryPropReplyMsg(int msgBodyProps, String phone, int flowId){
+        int len = 0;
+        // 1. 0x7e
+        byte[] bt1 = CommonUtil.integerTo1Bytes(Command.PKG_DELIMITER);
+        len += bt1.length;
+        // 2. 消息ID word(16)
+        byte[] bt2 = CommonUtil.integerTo2Bytes(Command.CMD_TERMINAL_PROP_QUERY);
+        len += bt2.length;
+        // 3.消息体属性
+        byte[] bt3 = CommonUtil.integerTo2Bytes(msgBodyProps);
+        len += bt3.length;
+        // 4. 终端手机号 bcd[6]
+        byte[] bt4 = CommonUtil.string2Bcd(phone);
+        len += bt4.length;
+        // 5. 消息流水号 word(16),按发送顺序从 0 开始循环累加
+        byte[] bt5 = CommonUtil.integerTo2Bytes(flowId);
+        len += bt5.length;
+        ByteBuffer buffer = ByteBuffer.allocate(len);
         buffer.put(bt1);
+        buffer.put(bt2);
+        buffer.put(bt3);
+        buffer.put(bt4);
+        buffer.put(bt5);
+
+        // 6.校验码
+        int checkSum = calculateChecksum(buffer.array(), 1, buffer.array().length);
+        byte[] bt9 = CommonUtil.integerTo1Bytes(checkSum);
+        len += bt9.length;
+        len += bt1.length;
+        ByteBuffer buf = ByteBuffer.allocate(len);
+        buf.put(buffer.array());
+        buf.put(bt9);
+        // 7. 0x7e
+        buf.put(bt1);
 
         // 转义
-        return doSendEscape(buffer.array(), 1, buffer.array().length - 1);
+        return doSendEscape(buf.array(), 1, buf.array().length - 1);
     }
 
 }

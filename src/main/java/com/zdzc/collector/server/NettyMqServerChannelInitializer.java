@@ -1,5 +1,6 @@
 package com.zdzc.collector.server;
 
+import com.zdzc.collector.rabbitmq.MqInitializer;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.timeout.IdleStateHandler;
@@ -7,6 +8,7 @@ import io.netty.handler.timeout.IdleStateHandler;
 public class NettyMqServerChannelInitializer extends
         ChannelInitializer<SocketChannel> {
     // private EventBus eventBus;
+
     private MqSender mqSender;
 
     public NettyMqServerChannelInitializer(MqSender mqSender) {
@@ -16,7 +18,7 @@ public class NettyMqServerChannelInitializer extends
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
         // Reader ilde time 3 minutes
-        ch.pipeline().addLast(new IdleStateHandler(3 * 60, 0, 0));
+        ch.pipeline().addLast(new IdleStateHandler(5 * 60, 0, 0));
         ch.pipeline().addLast(new HeartBeatHandler());
         ch.pipeline().addLast(new ToMessageDecoder());
         ch.pipeline().addLast(new EchoServerHandler(mqSender));

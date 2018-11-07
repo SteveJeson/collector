@@ -18,6 +18,8 @@ public class Header {
 
     private boolean hasSubPackage;  //是否有子包
 
+    private int msgType;    //消息类型：位置、报警、心跳等
+
     public int getMsgLength() {
         return msgLength;
     }
@@ -74,7 +76,7 @@ public class Header {
         this.msgBodyProps = msgBodyProps;
     }
 
-    public boolean isHasSubPackage() {
+    public boolean hasSubPackage() {
         return hasSubPackage;
     }
 
@@ -82,12 +84,11 @@ public class Header {
         this.hasSubPackage = hasSubPackage;
     }
 
-    //    public byte[] getBytes() {
-//        byte[] buffer = new byte[5];
-//        ByteBuffer b = ByteBuffer.allocate(4);
-//        b.putInt(msgLength);
-//        System.arraycopy(b.array(), 0, buffer, 0, 4);
-//        buffer[4] = msgType;
-//        return buffer;
-//    }
+    public int getMsgType() {
+        return msgType;
+    }
+
+    public void setMsgType(int msgType) {
+        this.msgType = msgType;
+    }
 }

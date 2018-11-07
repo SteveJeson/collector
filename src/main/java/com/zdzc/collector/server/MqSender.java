@@ -1,8 +1,10 @@
 package com.zdzc.collector.server;
 
-public class MqSender {
+import com.zdzc.collector.rabbitmq.MqInitializer;
 
-    public void send(String message){
+public class MqSender extends MqInitializer {
 
+    public void send(int no){
+        System.out.println("gps channels num ==> "+getGpsChannels().size());
     }
 }

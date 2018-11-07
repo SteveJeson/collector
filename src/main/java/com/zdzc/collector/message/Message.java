@@ -19,9 +19,15 @@ public class Message {
     private String all;
 
     /**
-     * 应答消息
+     * 通用应答消息
      */
     private byte[] replyBody;
+
+    /**
+     * 额外应答消息（如：查询终端属性）
+     */
+    private byte[] extReplyBody;
+
 
     public Message() {
     }
@@ -57,5 +63,13 @@ public class Message {
 
     public void setAll(String all) {
         this.all = all;
+    }
+
+    public byte[] getExtReplyBody() {
+        return extReplyBody;
+    }
+
+    public void setExtReplyBody(byte[] extReplyBody) {
+        this.extReplyBody = extReplyBody;
     }
 }

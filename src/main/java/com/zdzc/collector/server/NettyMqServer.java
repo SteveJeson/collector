@@ -26,8 +26,9 @@ public class NettyMqServer {
     public NettyMqServer() {
         bossGroup = new NioEventLoopGroup();
         workerGroup = new NioEventLoopGroup();
-        mqSender = new MqSender();
         mqInitializer = new MqInitializer();
+        System.out.println("size ==> "+mqInitializer.gpsChannels.size());
+        mqSender = new MqSender();
     }
 
     private void start(int port) {

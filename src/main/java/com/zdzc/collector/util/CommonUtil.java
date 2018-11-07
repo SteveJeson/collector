@@ -1,7 +1,6 @@
 package com.zdzc.collector.util;
 
 import io.netty.util.CharsetUtil;
-import org.apache.commons.lang.CharSet;
 
 public class CommonUtil {
 
