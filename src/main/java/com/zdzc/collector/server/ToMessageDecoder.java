@@ -62,6 +62,7 @@ public class ToMessageDecoder extends MessageToMessageDecoder {
      */
     private Message toJt808Decoder(byte[] data){
         String hexstr = StringUtil.toHexStringPadded(data);
+        logger.info("source data -> "+hexstr);
         byte[] bs = doReceiveEscape(data);
         Boolean isValid = validateChecksum(bs);
         if(!isValid){

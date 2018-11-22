@@ -1,6 +1,7 @@
 package com.zdzc.collector.server;
 
 import com.zdzc.collector.rabbitmq.MqInitializer;
+import com.zdzc.collector.util.SpringContextUtil;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -10,13 +11,24 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.PropertySource;
 
+@PropertySource(value = "application.properties")
 public class NettyMqServer {
     private static final Logger log = LoggerFactory
             .getLogger(NettyMqServer.class);
 
+    @Value("${remote.server.ip}")
+    private String ip;
+
+    @Value("${remote.server.port}")
+    private int port;
+
     private EventLoopGroup bossGroup;
+
     private EventLoopGroup workerGroup;
+
     private Channel serverChannel;
 
     private MqSender mqSender;
@@ -26,8 +38,7 @@ public class NettyMqServer {
     public NettyMqServer() {
         bossGroup = new NioEventLoopGroup();
         workerGroup = new NioEventLoopGroup();
-        mqInitializer = new MqInitializer();
-        System.out.println("size ==> "+mqInitializer.gpsChannels.size());
+        mqInitializer = (MqInitializer)SpringContextUtil.getBean(MqInitializer.class);
         mqSender = new MqSender();
     }
 
@@ -37,7 +48,7 @@ public class NettyMqServer {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
-                    .childHandler(new NettyMqServerChannelInitializer(mqSender));
+                    .childHandler(new NettyMqServerChannelInitializer(mqInitializer,mqSender));
             b.option(ChannelOption.SO_BACKLOG, 128);
             b.childOption(ChannelOption.SO_KEEPALIVE, false);
             b.childOption(ChannelOption.TCP_NODELAY, true);

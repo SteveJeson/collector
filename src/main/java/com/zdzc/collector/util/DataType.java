@@ -2,7 +2,7 @@ package com.zdzc.collector.util;
 
 public enum DataType {
     GPS(1, "终端定位"), ALARM(2, "终端报警"), HEARTBEAT(3, "终端心跳"),
-    Registry(4, "终端注册"), Authentication(5, "终端鉴权"), Property(6, "终端属性");
+    Registry(4, "终端注册"), Authentication(5, "终端鉴权"), Property(6, "终端属性"), BUSINESS(7, "报警业务");
 
     private int value;
     private String desc;

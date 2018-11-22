@@ -20,86 +20,88 @@ import java.util.concurrent.TimeoutException;
 public class MqInitializer {
 
     @Value("${mq.server.hostname}")
-    private String hostname;
+    public String hostname;
 
     @Value("${mq.server.username}")
-    private String username;
+    public String username;
 
     @Value("${mq.server.password}")
-    private String password;
+    public String password;
 
     @Value("${mq.server.port}")
-    private int port;
+    public int port;
 
     @Value("${gps.connection.count}")
-    private int gpsConnCount;
+    public int gpsConnCount;
 
     @Value("${gps.channel.count}")
-    private int gpsChannelCount;
+    public int gpsChannelCount;
 
     @Value("${gps.queue.prex}")
-    private String gpsQueuePrex;
+    public String gpsQueuePrex;
 
     @Value("${gps.queue.count}")
-    private int gpsQueueCount;
+    public int gpsQueueCount;
 
     @Value("${gps.queue.start}")
-    private int gpsQueueStart;
+    public int gpsQueueStart;
 
     @Value("${alarm.connection.count}")
-    private int alarmConnCount;
+    public int alarmConnCount;
 
     @Value("${alarm.channel.count}")
-    private int alarmChannelCount;
+    public int alarmChannelCount;
 
     @Value("${alarm.queue.prex}")
-    private String alarmQueuePrex;
+    public String alarmQueuePrex;
 
     @Value("${alarm.queue.count}")
-    private int alarmQueueCount;
+    public int alarmQueueCount;
 
     @Value("${alarm.queue.start}")
-    private int alarmQueueStart;
+    public int alarmQueueStart;
 
     @Value("${heartbeat.connection.count}")
-    private int heartbeatConnCount;
+    public int heartbeatConnCount;
 
     @Value("${heartbeat.channel.count}")
-    private int heartbeatChannelCount;
+    public int heartbeatChannelCount;
 
     @Value("${heartbeat.queue.prex}")
-    private String heartbeatQueuePrex;
+    public String heartbeatQueuePrex;
 
     @Value("${heartbeat.queue.count}")
-    private int heartbeatQueueCount;
+    public int heartbeatQueueCount;
 
     @Value("${heartbeat.queue.start}")
-    private int heartbeatQueueStart;
+    public int heartbeatQueueStart;
 
     @Value("${business.connection.count}")
-    private int businessConnCount;
+    public int businessConnCount;
 
     @Value("${business.channel.count}")
-    private int businessChannelCount;
+    public int businessChannelCount;
 
     @Value("${business.queue.prex}")
-    private String businessQueuePrex;
+    public String businessQueuePrex;
 
     @Value("${business.queue.count}")
-    private int businessQueueCount;
+    public int businessQueueCount;
 
     @Value("${business.queue.start}")
-    private int businessQueueStart;
+    public int businessQueueStart;
 
-    private ConnectionFactory factory;
+    public ConnectionFactory factory;
 
-    private static final Logger logger = LoggerFactory.getLogger(MqInitializer.class);
+    public static final Logger logger = LoggerFactory.getLogger(MqInitializer.class);
 
     public CopyOnWriteArrayList<Channel> gpsChannels = new CopyOnWriteArrayList<>();
 
     public CopyOnWriteArrayList<Channel> alarmChannels = new CopyOnWriteArrayList<>();
 
     public CopyOnWriteArrayList<Channel> heartbeatChannels = new CopyOnWriteArrayList<>();
+
+    public CopyOnWriteArrayList<Channel> businessChannels = new CopyOnWriteArrayList<>();
 
     public CopyOnWriteArrayList<Channel> replyChannels = new CopyOnWriteArrayList<>();
 
@@ -134,6 +136,12 @@ public class MqInitializer {
             createQueues(this.factory.newConnection(), DataType.HEARTBEAT.getValue());
         }
 
+        //业务
+        for(int i = 0;i < businessConnCount;i++){
+            logger.info("create BUSINESS connection " + (i + 1));
+            createQueues(this.factory.newConnection(), DataType.BUSINESS.getValue());
+        }
+
     }
 
     /**
@@ -152,13 +160,15 @@ public class MqInitializer {
      * @param connection
      * @param type
      */
-    private void createQueues(Connection connection, int type){
+    public void createQueues(Connection connection, int type){
         if(DataType.GPS.getValue() == type){
             createQueues(connection, gpsQueuePrex, gpsChannelCount, gpsQueueCount, type);
         }else if(DataType.ALARM.getValue() == type){
             createQueues(connection, alarmQueuePrex, alarmChannelCount, alarmQueueCount, type);
         }else if (DataType.HEARTBEAT.getValue() == type) {
             createQueues(connection, heartbeatQueuePrex, heartbeatChannelCount, heartbeatQueueCount, type);
+        }else if(DataType.BUSINESS.getValue() == type){
+            createQueues(connection, businessQueuePrex, businessChannelCount, businessQueueCount, type);
         }
     }
 
@@ -170,7 +180,7 @@ public class MqInitializer {
      * @param queueCount
      * @param type
      */
-    private void createQueues(Connection connection, String queuePrex, int channelCount, int queueCount, int type){
+    public void createQueues(Connection connection, String queuePrex, int channelCount, int queueCount, int type){
         for(int i = 0;i < channelCount;i++){
             try {
                 Channel channel = connection.createChannel();
@@ -183,6 +193,8 @@ public class MqInitializer {
                     alarmChannels.add(channel);
                 }else if(DataType.HEARTBEAT.getValue() == type){
                     heartbeatChannels.add(channel);
+                }else if(DataType.BUSINESS.getValue() == type){
+                    businessChannels.add(channel);
                 }
 
             } catch (IOException e) {
