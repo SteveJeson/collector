@@ -11,19 +11,10 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.PropertySource;
 
-@PropertySource(value = "application.properties")
 public class NettyMqServer {
     private static final Logger log = LoggerFactory
             .getLogger(NettyMqServer.class);
-
-    @Value("${remote.server.ip}")
-    private String ip;
-
-    @Value("${remote.server.port}")
-    private int port;
 
     private EventLoopGroup bossGroup;
 
