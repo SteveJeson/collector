@@ -56,16 +56,16 @@ public class EchoServerHandler extends ChannelInboundHandlerAdapter {
             int msgType = message.getHeader().getMsgType();
             if(msgType == DataType.GPS.getValue()){
                 //定位
-                System.out.println("gps num ==> " + gpsNum.intValue());
+//                System.out.println("gps num ==> " + gpsNum.intValue());
                 toSendGpsMessage(message);
             }else if(msgType == DataType.ALARM.getValue()){
                 //报警
-                System.out.println("alarm num ==> " + alarmNum.intValue());
+//                System.out.println("alarm num ==> " + alarmNum.intValue());
                 toSendAlarmMessage(message);
 
             }else if(msgType == DataType.HEARTBEAT.getValue()){
                 //心跳
-                System.out.println("heartbeat num ==> " + heartbeatNum.intValue());
+//                System.out.println("heartbeat num ==> " + heartbeatNum.intValue());
                 toSendHeartBeatMessage(message);
             }
 
@@ -124,19 +124,20 @@ public class EchoServerHandler extends ChannelInboundHandlerAdapter {
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         // A closed channel will be removed from ChannelGroup automatically
         channels.add(ctx.channel());
-        log.info("clients num ==> "+ channels.size());
+        System.out.println("clients num ==> "+ channels.size());
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         log.warn("Disconnected client -> " + ctx.channel().remoteAddress());
-        log.info("clients num ==> " + channels.size());
+//        log.info("clients num ==> " + channels.size());
+        System.out.println("clients num ==> " + channels.size());
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
             throws Exception {
-        ctx.close();
+//        ctx.close();
         log.warn(cause.getMessage());
     }
 

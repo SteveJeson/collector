@@ -64,9 +64,10 @@ public class ToMessageDecoder extends MessageToMessageDecoder {
         String hexstr = StringUtil.toHexStringPadded(data);
         logger.info("source data -> "+hexstr);
         byte[] bs = doReceiveEscape(data);
+        String hex = StringUtil.toHexStringPadded(bs);
         Boolean isValid = validateChecksum(bs);
         if(!isValid){
-            logger.error("校验码验证错误：" + hexstr);
+            logger.error("校验码验证错误：" + hex + " src -> " + hexstr);
             return null;
         }
        return decodeMessage(data);

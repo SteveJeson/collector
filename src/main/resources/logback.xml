@@ -23,7 +23,7 @@
 
     <appender name="debug_file" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${path}/debug.log</file>
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <!-- 每天一归档 -->
             <fileNamePattern>${path}/debug.log.%d{yyyy-MM-dd}-%i.zip</fileNamePattern>
             <maxHistory>${maxHistory}</maxHistory>
@@ -112,7 +112,7 @@
 
     <root>
         <level value="info"/>
-        <appender-ref ref="console"/>
+        <!--<appender-ref ref="console"/>-->
         <appender-ref ref="debug_file"/>
         <appender-ref ref="info_file"/>
         <appender-ref ref="warn_file"/>
