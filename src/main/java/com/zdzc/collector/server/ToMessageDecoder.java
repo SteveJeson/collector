@@ -35,7 +35,15 @@ public class ToMessageDecoder extends MessageToMessageDecoder {
     @Override
     protected void decode(ChannelHandlerContext channelHandlerContext, Object o, List list) throws Exception {
         ByteBuf in = (ByteBuf)o;
-        String beginMark = StringUtil.byteToHexStringPadded(in.getByte(0));
+        byte[] arr = new byte[in.readableBytes()];
+        if(!in.hasArray()){
+            in.getBytes(in.readerIndex(), arr);
+            String src = ByteArrayUtil.toHexString(arr);
+            logger.info("source data -> "+src);
+        }
+
+        String beginMark = StringUtil.byteToHexStringPadded(arr[0]);
+
         List<String> markList = Arrays.asList(ProtocolSign.JT808.getValue(), ProtocolSign.WRT.getValue());
         if(!markList.contains(beginMark.toUpperCase())){
             System.out.println("未知协议内容！");
