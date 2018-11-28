@@ -19,6 +19,7 @@ import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 
 public class ToMessageDecoder extends MessageToMessageDecoder {
@@ -90,24 +91,27 @@ public class ToMessageDecoder extends MessageToMessageDecoder {
      * @return
      */
     private byte[] doReceiveEscape(byte[] data){
-        ByteBuffer bb = ByteBuffer.allocate(data.length);
-
+        List<Byte> list = new LinkedList<>();
         for (int i = 0; i < data.length; i++)
         {
             if (data[i] == 0x7d && data[i + 1] == 0x01)
             {
-                bb.put((byte)0x7d);
+                list.add((byte)0x7d);
                 i++;
             }
             else if (data[i] == 0x7d && data[i + 1] == 0x02)
             {
-                bb.put((byte)0x7e);
+                list.add((byte)0x7e);
                 i++;
             }
             else
             {
-                bb.put(data[i]);
+                list.add(data[i]);
             }
+        }
+        ByteBuffer bb = ByteBuffer.allocate(list.size());
+        for (Byte b : list) {
+            bb.put(b);
         }
         return bb.array();
     }
@@ -345,26 +349,30 @@ public class ToMessageDecoder extends MessageToMessageDecoder {
      */
     private static byte[] doSendEscape(byte[] data, int start, int end)
     {
-        ByteBuffer buffer = ByteBuffer.allocate(data.length);
+        List<Byte> list = new LinkedList<>();
         for (int i = 0; i < start; i++)
         {
-            buffer.put(data[i]);
+            list.add(data[i]);
         }
         for (int i = start; i < end; i++)
         {
             if (data[i] == 0x7e)
             {
-                buffer.put((byte)0x7d);
-                buffer.put((byte)0x02);
+                list.add((byte)0x7d);
+                list.add((byte)0x02);
             }
             else
             {
-                buffer.put(data[i]);
+                list.add(data[i]);
             }
         }
         for (int i = end; i < data.length; i++)
         {
-            buffer.put(data[i]);
+            list.add(data[i]);
+        }
+        ByteBuffer buffer = ByteBuffer.allocate(list.size());
+        for (Byte b : list) {
+            buffer.put(b);
         }
         return buffer.array();
     }
