@@ -32,7 +32,7 @@ public class ClientPoolManager {
 
         // 初始化连接池
         FixedChannelPool channelPool = new FixedChannelPool(bootstrap, new ClientChannelPoolHandler(), maxChannel);
-        logger.info("Init client channel pool with max connections -> "+maxChannel);
+        logger.info("Init client channel pool with max connections -> {}", maxChannel);
         return channelPool;
     }
 }
